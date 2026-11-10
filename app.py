@@ -14,10 +14,11 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
 
-# Cấu hình API AI (Sử dụng OpenRouter để kết nối các model mạnh và linh hoạt)
+# --- CẤU HÌNH API AI TRỰC TIẾP ---
+# Bạn hãy thay chuỗi bên dưới bằng API Key thật của bạn (ví dụ lấy từ OpenRouter)
+MY_API_KEY = "sk-or-v1-YOUR_API_KEY_O_DAY" 
 AI_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-# Bạn có thể đổi sang các model không kiểm duyệt (như Llama 3 Uncensored, Dolphin, hoặc DeepSeek)
-AI_MODEL_NAME = os.environ.get("AI_MODEL", "deepseek/deepseek-chat") 
+AI_MODEL_NAME = "deepseek/deepseek-chat" 
 
 @app.route('/')
 def home():
@@ -63,14 +64,12 @@ def home():
                     const text = input.value.trim();
                     if(!text) return;
                     
-                    // Hiển thị tin nhắn người dùng
                     chatBox.innerHTML += `<div class="message user-msg">${escapeHtml(text)}</div>`;
                     input.value = '';
                     chatBox.scrollTop = chatBox.scrollHeight;
                     
-                    // Hiển thị trạng thái đang nghĩ
                     const loadingId = 'loading_' + Date.now();
-                    chatBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Đang xử lý phản hồi...</div>`;
+                    chatBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">AI đang suy nghĩ...</div>`;
                     chatBox.scrollTop = chatBox.scrollHeight;
                     
                     try {
@@ -102,17 +101,14 @@ def api_chat():
     if not user_msg:
         return jsonify({"reply": "Vui lòng nhập nội dung cần hỏi!"})
     
-    # Lấy API Key từ biến môi trường của Render (hoặc cấu hình trực tiếp)
-    api_key = os.environ.get("AI_API_KEY", "")
-    
-    if not api_key:
-        return jsonify({"reply": f"Hệ thống đã nhận câu hỏi: '{user_msg}'. (Lưu ý: Bạn chưa cấu hình biến môi trường AI_API_KEY trên Render nên AI đang ở chế độ chờ. Hãy thêm API Key để AI bắt đầu trả lời tự động giống các nền tảng khác!)"})
+    if "YOUR_API_KEY_O_DAY" in MY_API_KEY:
+        return jsonify({"reply": "Bạn chưa thay API Key thật vào biến MY_API_KEY trong file app.py kìa! Hãy dán key của bạn vào đó nhé."})
 
     try:
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {MY_API_KEY}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://gagaming-shop.onrender.com", # Tùy chỉnh theo tên web của bạn
+            "HTTP-Referer": "https://render.com",
             "X-Title": "Ga Gaming AI Hub"
         }
         
