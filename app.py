@@ -44,22 +44,62 @@ def home():
                     <label>Telegram Bot Token:</label>
                     <input type="text" id="botToken" placeholder="Ví dụ: 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ">
                     
-                    <label style="margin-top: 15px; display: block;">Mã nguồn Python cho Bot (Telebot):</label>
-                    <textarea id="botCode">import telebot
+                    <label style="margin-top: 15px; display: block;">Mã nguồn Python cho Bot:</label>
+                    <textarea id="botCode">import logging
+import random
+import requests
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 TOKEN = "DIEN_TOKEN_VAO_DAY"
-bot = telebot.TeleBot(TOKEN)
+KEY_STORAGE_URL = "https://shopcloudphone.onrender.com/kho-key.txt"
+cached_keys = []
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Chào bạn! Bot của tôi đang chạy 24/7 trên web server rất mượt mà!")
+def fetch_keys_from_web():
+    try:
+        response = requests.get(KEY_STORAGE_URL, timeout=10)
+        if response.status_code == 200:
+            keys = [line.strip() for line in response.text.splitlines() if line.strip()]
+            return keys
+    except Exception as e:
+        print(f"Lỗi khi tải kho key: {e}")
+    return []
 
-@bot.message_handler(func=lambda msg: True)
-def echo_all(message):
-    bot.reply_to(message, f"Bạn vừa nói: {message.text}")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_name = update.effective_user.first_name
+    await update.message.reply_text(
+        f"Xin chào {user_name}! 👋 Chào mừng bạn đến với bot phát key của ShopCloudPhone.\n\n"
+        "Bấm /laykey để nhận ngay một key miễn phí nhé!"
+    )
 
-print("Bot đang khởi động...")
-bot.infinity_polling()</textarea>
+async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global cached_keys
+    if not cached_keys:
+        cached_keys = fetch_keys_from_web()
+
+    if not cached_keys:
+        await update.message.reply_text("⚠️ Kho key trên hệ thống hiện đang trống hoặc chưa có dữ liệu. Vui lòng quay lại sau!")
+        return
+
+    selected_key = random.choice(cached_keys)
+    cached_keys.remove(selected_key)
+
+    await update.message.reply_text(
+        f"🎉 **Nhận key thành công!**\\n\\n🔑 Key của bạn: `{selected_key}`\\n\\n*(Hãy sao chép key để sử dụng trên hệ thống)*",
+        parse_mode="Markdown"
+    )
+
+def main():
+    application = ApplicationBuilder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("laykey", get_key))
+    print("🤖 Bot đang chạy...")
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()</textarea>
                     
                     <button onclick="deployBot()">Lưu Code & Khởi Động Bot 24/7</button>
                     <div class="status" id="statusResult">Chưa có bot nào được kích hoạt trong phiên làm việc này.</div>
@@ -102,18 +142,16 @@ def deploy():
     if not token:
         return jsonify({"message": "Thiếu Token bot!"})
     
-    # Lấy phần đầu token làm định danh bot
     bot_id = token.split(':')[0]
     bot_file_path = os.path.join(BOTS_DIR, f"bot_{bot_id}.py")
     
-    # Tự động thay token vào code nếu người dùng để trống
+    # Tự động thay token vào code nếu người dùng để trống chữ DIEN_TOKEN_VAO_DAY
     final_code = code.replace('DIEN_TOKEN_VAO_DAY', token)
     
-    # Ghi đè file code mới nhất
     with open(bot_file_path, "w", encoding="utf-8") as f:
         f.write(final_code)
         
-    # Nếu bot này đang chạy tiến trình cũ, tiến hành tắt nó đi trước khi bật bản mới
+    # Tắt tiến trình cũ nếu đang chạy
     if bot_id in running_bots:
         try:
             running_bots[bot_id].terminate()
@@ -121,12 +159,12 @@ def deploy():
         except:
             pass
             
-    # Khởi chạy ngầm tiến trình Python độc lập cho bot
-    process = subprocess.Popen(["python", bot_file_path])
+    # Sử dụng python3 để khởi chạy ngầm tiến trình bot độc lập 24/7
+    process = subprocess.Popen(["python3", bot_file_path])
     running_bots[bot_id] = process
     
     return jsonify({
-        "message": f"✅ Thành công! Bot (ID: {bot_id}) đã bắt đầu chạy ngầm 24/7 trên server. Bạn có thể vào Telegram kiểm tra bot ngay!"
+        "message": f"✅ Thành công! Bot (ID: {bot_id}) đã chạy ngầm 24/7 bằng python3 trên server. Vào Telegram test ngay!"
     })
 
 if __name__ == '__main__':
